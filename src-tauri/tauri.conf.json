@@ -1,0 +1,52 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "Depresnyak",
+  "version": "../package.json",
+  "identifier": "ru.buslaev.depresnyak",
+  "build": {
+    "frontendDist": "../ui",
+    "beforeBuildCommand": "npm run prepare-ui",
+    "beforeDevCommand": "npm run prepare-ui"
+  },
+  "app": {
+    "withGlobalTauri": true,
+    "windows": [
+      {
+        "label": "main",
+        "title": "Кот Депресняк",
+        "width": 700,
+        "height": 570,
+        "visible": false,
+        "transparent": true,
+        "decorations": false,
+        "shadow": false,
+        "resizable": false,
+        "maximizable": false,
+        "alwaysOnTop": true,
+        "skipTaskbar": false,
+        "focus": false,
+        "dragDropEnabled": false,
+        "additionalBrowserArgs": "--disable-features=msWebOOUI,msPdfOOUI,msSmartScreenProtection --autoplay-policy=no-user-gesture-required"
+      }
+    ],
+    "security": {
+      "dangerousDisableAssetCspModification": ["style-src"],
+      "csp": "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; media-src 'self' data: blob:; connect-src 'self' ipc: http://ipc.localhost http://catfont.localhost catfont: data: blob:; worker-src 'self' blob:"
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": ["nsis"],
+    "icon": ["icons/icon.ico"],
+    "publisher": "Artem Ishchenko",
+    "copyright": "Кот Депресняк © авторы «Мефодия Буслаева»",
+    "shortDescription": "Кот Депресняк на рабочем столе",
+    "windows": {
+      "nsis": {
+        "installMode": "currentUser",
+        "languages": ["Russian", "English"],
+        "displayLanguageSelector": false
+      }
+    }
+  }
+}

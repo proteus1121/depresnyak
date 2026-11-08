@@ -7,7 +7,8 @@
 Оригинальная программа была Flash-роликом, завёрнутым в MDM Zinc 2.5 и упакованным Thinstall.
 На Windows 10/11 она не запускается: загрузчик Thinstall 2006 года падает в `ntdll`, а Defender
 ложно определяет его как троян. В этом порте используется **тот же самый ролик** (вся анимация,
-звук и скрипты из оригинала). Его проигрывает [Ruffle](https://ruffle.rs) в прозрачном окне Electron.
+звук и скрипты из оригинала). Его проигрывает [Ruffle](https://ruffle.rs) в прозрачном окне
+[Tauri](https://tauri.app) (системный WebView2), поэтому программа весит около 13 МБ.
 
 ## Что умеет
 
@@ -51,34 +52,41 @@ lech → son → vstaet → fly … В ролике нет неиспользу�
 
 Готовые сборки лежат в [Releases](https://github.com/proteus1121/depresnyak/releases/latest):
 
-- `Depresnyak-<версия>-portable.exe` — один файл, запускается без установки;
-- `Depresnyak-<версия>-win-x64.zip` — то же самое папкой (распаковать и запустить `Depresnyak.exe`), стартует быстрее.
+- `Depresnyak-<версия>-portable.exe` — один файл (~13 МБ), запускается без установки;
+- `Depresnyak-<версия>-setup.exe` — установщик (ярлык в меню «Пуск», удаление через «Приложения»).
 
-Сборки не подписаны, поэтому при первом запуске SmartScreen может предупредить:
-«Подробнее» → «Выполнить в любом случае».
+Нужен WebView2 — он уже есть в Windows 10/11. Сборки не подписаны, поэтому при первом запуске
+SmartScreen может предупредить: «Подробнее» → «Выполнить в любом случае».
 
 ## Сборка из исходников
 
+Нужны Node.js 22, [Rust](https://rustup.rs) и Visual Studio Build Tools (C++).
+
 ```sh
 npm install
-npm start      # запустить
-npm run dist   # собрать dist/Depresnyak-<версия>-portable.exe и .zip
+npm start      # запустить в режиме разработки
+npm run dist   # собрать src-tauri/target/release/depresnyak.exe и установщик в .../bundle/nsis/
 ```
 
-Новый релиз: поставить тег `vX.Y.Z` и запушить его (`git tag v3.0.1 && git push origin v3.0.1`).
-GitHub Actions (`.github/workflows/release.yml`) соберёт exe и zip и выложит их в релиз.
+Новый релиз: поставить тег `vX.Y.Z` и запушить его (`git tag v3.1.1 && git push origin v3.1.1`).
+GitHub Actions (`.github/workflows/release.yml`) соберёт exe и установщик и выложит их в релиз.
 Workflow можно запустить и вручную: Actions → Release → Run workflow.
 
 ## Как устроено
 
-- `app/main.js` — окно Electron (прозрачное, без рамки, поверх всех), клики сквозь прозрачные
-  пиксели, перетаскивание, трей, настройки.
-- `app/renderer.js`, `app/config.js` — Ruffle, обработка `fscommand`, меню кота.
-- `app/assets/cat.swf` — оригинальный ролик с двумя правками (см. `tools/patch_swf.py`):
+- `src-tauri/src/main.rs` — окно (прозрачное, без рамки, поверх всех), трей, настройки,
+  команды ролика (`mdm.*`), диалог «О программе», автозапуск, системный Arial для Ruffle.
+- `ui/` — страница с Ruffle: `config.js` (настройки Ruffle), `renderer.js` (меню кота,
+  перетаскивание, `fscommand`, клики сквозь пустые места), `assets/cat.swf`.
+- `ui/assets/cat.swf` — оригинальный ролик с правками (см. `tools/patch_swf.py`):
   - заглушка `_global.mdm`: вызовы Zinc API (`mdm.Application.exit/minimize`,
     `mdm.Dialogs.prompt`) превращаются в `fscommand`, которые обрабатывает приложение;
+  - колбэк `catHit(x, y)` = `_root.hitTest(x, y, true)` через `ExternalInterface`:
+    страница спрашивает у ролика, есть ли под курсором кот, и если нет — окно пропускает
+    клики к окнам под ним (как прозрачное окно Zinc);
   - недостающая метка `phr16`.
 - Фразы набраны системным шрифтом «Arial CYR», вместо него берётся Arial из `C:\Windows\Fonts`.
+- `ui/selftest.js` — самотест без мыши (`CAT_SELFTEST=<пункт меню>`, `CAT_SELFTEST_LOG=<файл>`).
 
 ### Как ролик был извлечён из cat.exe
 

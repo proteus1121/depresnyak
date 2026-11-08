@@ -1,7 +1,7 @@
 name: Release
 
 # Сборка Windows-exe и публикация в GitHub Releases.
-#  - push тега вида v1.2.3  -> релиз v1.2.3 с exe и zip;
+#  - push тега вида v1.2.3  -> релиз v1.2.3 с exe и установщиком;
 #  - ручной запуск (Actions -> Release -> Run workflow) -> указать тег, релиз создастся/обновится.
 on:
   push:
@@ -9,7 +9,7 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: 'Тег релиза (например, v3.0.0)'
+        description: 'Тег релиза (например, v3.1.0)'
         required: true
 
 permissions:
@@ -20,7 +20,6 @@ jobs:
     runs-on: windows-latest
     env:
       TAG: ${{ github.event.inputs.tag || github.ref_name }}
-      CSC_IDENTITY_AUTO_DISCOVERY: 'false'  # без подписи кода
       PYTHONIOENCODING: utf-8
     steps:
       - uses: actions/checkout@v5
@@ -34,11 +33,19 @@ jobs:
         with:
           python-version: '3.12'
 
+      - name: Rust toolchain
+        shell: bash
+        run: rustup toolchain install stable --profile minimal && rustup default stable
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
       - name: Install dependencies
         run: npm ci
 
       - name: Rebuild cat.swf from the original
-        run: python tools/patch_swf.py assets-src/cat_original.swf app/assets/cat.swf
+        run: python tools/patch_swf.py assets-src/cat_original.swf ui/assets/cat.swf
 
       - name: Set version from tag
         shell: bash
@@ -53,16 +60,19 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           VERSION="${TAG#v}"
-          FILES=(dist/Depresnyak-${VERSION}-portable.exe dist/Depresnyak-${VERSION}-win-x64.zip)
-          ls -la "${FILES[@]}"
+          mkdir -p out
+          cp src-tauri/target/release/depresnyak.exe "out/Depresnyak-${VERSION}-portable.exe"
+          cp src-tauri/target/release/bundle/nsis/Depresnyak_${VERSION}_x64-setup.exe "out/Depresnyak-${VERSION}-setup.exe"
+          ls -la out
           NOTES="Кот Депресняк ${VERSION} для Windows 10/11 (x64).
 
           - **Depresnyak-${VERSION}-portable.exe** — один файл, запускается без установки.
-          - **Depresnyak-${VERSION}-win-x64.zip** — та же программа папкой (распаковать и запустить Depresnyak.exe), стартует быстрее.
+          - **Depresnyak-${VERSION}-setup.exe** — установщик (ярлык в меню «Пуск», удаление через «Приложения»).
 
-          Программа не подписана, поэтому Windows SmartScreen может предупредить при первом запуске: «Подробнее» → «Выполнить в любом случае»."
+          Нужен WebView2 — он уже есть в Windows 10/11 (если нет, установщик скачает его сам).
+          Программа не подписана, поэтому SmartScreen может предупредить при первом запуске: «Подробнее» → «Выполнить в любом случае»."
           if gh release view "$TAG" >/dev/null 2>&1; then
-            gh release upload "$TAG" "${FILES[@]}" --clobber
+            gh release upload "$TAG" out/* --clobber
           else
-            gh release create "$TAG" "${FILES[@]}" --title "Кот Депресняк ${VERSION}" --notes "$NOTES" --target "$GITHUB_SHA"
+            gh release create "$TAG" out/* --title "Кот Депресняк ${VERSION}" --notes "$NOTES" --target "$GITHUB_SHA"
           fi

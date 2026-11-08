@@ -2,8 +2,10 @@
 
 Оригинальный ролик вызывает mdm.Application.exit/minimize/minimizeToTray и
 mdm.Dialogs.prompt. В Ruffle этих объектов нет, поэтому создаём _global.mdm,
-методы которого вызывают fscommand(...), а хост-приложение (Electron)
-обрабатывает эти команды.
+методы которого вызывают fscommand(...), а хост-приложение (Tauri)
+обрабатывает эти команды. Кроме того, регистрирует ExternalInterface-колбэк
+catHit(x, y) = _root.hitTest(x, y, true) для кликов сквозь пустые места окна
+и добавляет пропущенную метку phr16.
 
 Использование: python patch_swf.py <вход.swf> <выход.swf>
 """
@@ -67,10 +69,34 @@ application = obj([
 dialogs = obj([
     ("prompt", func(["t"], fscommand("prompt", "t"))),
 ])
+CALL_METHOD, GET_MEMBER, RETURN = 0x52, 0x4E, 0x3E
+
+
+def push_true():
+    return act(0x96, b"\x05\x01")
+
+
+def push_null():
+    return act(0x96, b"\x02")
+
+
+# function (x, y) { return _root.hitTest(x, y, true); }
+hit_fn = func(["x", "y"],
+              push_true() + push_str("y") + act(GET_VAR) + push_str("x") + act(GET_VAR) + push_int(3)
+              + push_str("_root") + act(GET_VAR) + push_str("hitTest") + act(CALL_METHOD) + act(RETURN))
+
+# flash.external.ExternalInterface.addCallback("catHit", null, hit_fn)
+# Хост спрашивает у ролика, есть ли под курсором нарисованный кот, и пропускает клики
+# сквозь пустые места окна (как прозрачное окно Zinc).
+hit_callback = (hit_fn + push_null() + push_str("catHit") + push_int(3)
+                + push_str("flash") + act(GET_VAR) + push_str("external") + act(GET_MEMBER)
+                + push_str("ExternalInterface") + act(GET_MEMBER)
+                + push_str("addCallback") + act(CALL_METHOD) + act(POP))
+
 shim = push_str("_global") + act(GET_VAR) + push_str("mdm") + obj([
     ("Application", application),
     ("Dialogs", dialogs),
-]) + act(SET_MEMBER) + b"\0"
+]) + act(SET_MEMBER) + hit_callback + b"\0"
 
 
 def tag(code, body):
@@ -129,6 +155,7 @@ def main(src, dst):
         p += 2 + (struct.unpack("<I", body[p + 2:p + 6])[0] + 4 if ln == 63 else ln)
     body = body[:p] + tag(12, shim) + body[p:]
     body = add_missing_phrase_labels(body, p)
+    ver = max(ver, 8)  # flash.external.ExternalInterface доступен с SWF 8
     out = b"CWS" + bytes([ver]) + struct.pack("<I", len(body) + 8) + zlib.compress(body, 9)
     open(dst, "wb").write(out)
     print(f"{dst}: {len(out)} bytes, shim {len(shim)} bytes")

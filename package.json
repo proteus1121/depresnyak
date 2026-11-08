@@ -1,60 +1,18 @@
 {
   "name": "depresnyak",
-  "productName": "Кот Депресняк",
-  "version": "3.0.0",
-  "description": "Кот Депресняк — настольный питомец (порт с MDM Zinc/Flash на Electron + Ruffle)",
-  "main": "app/main.js",
+  "version": "3.1.0",
+  "description": "Кот Депресняк — настольный питомец (порт с MDM Zinc/Flash на Tauri + Ruffle)",
   "private": true,
   "scripts": {
-    "start": "electron .",
-    "patch-swf": "python tools/patch_swf.py assets-src/cat_original.swf app/assets/cat.swf",
-    "dist": "electron-builder --win --x64 --publish never"
+    "prepare-ui": "node tools/prepare-ui.js",
+    "patch-swf": "python tools/patch_swf.py assets-src/cat_original.swf ui/assets/cat.swf",
+    "start": "tauri dev",
+    "dist": "tauri build"
   },
   "dependencies": {
     "@ruffle-rs/ruffle": "0.7.1"
   },
   "devDependencies": {
-    "electron": "44.9.3",
-    "electron-builder": "26.18.0"
-  },
-  "build": {
-    "appId": "ru.buslaev.depresnyak",
-    "productName": "Кот Депресняк",
-    "executableName": "Depresnyak",
-    "copyright": "Кот Депресняк © авторы «Мефодия Буслаева»; порт — Artem Ishchenko",
-    "directories": {
-      "output": "dist",
-      "buildResources": "build"
-    },
-    "files": [
-      "app/**/*",
-      "!app/selftest.js",
-      "package.json",
-      "node_modules/@ruffle-rs/ruffle/**/*",
-      "!**/*.map"
-    ],
-    "asar": true,
-    "win": {
-      "icon": "build/icon.ico",
-      "target": [
-        {
-          "target": "portable",
-          "arch": [
-            "x64"
-          ]
-        },
-        {
-          "target": "zip",
-          "arch": [
-            "x64"
-          ]
-        }
-      ],
-      "artifactName": "Depresnyak-${version}-win-x64.${ext}"
-    },
-    "portable": {
-      "artifactName": "Depresnyak-${version}-portable.${ext}"
-    },
-    "publish": null
+    "@tauri-apps/cli": "2.12.4"
   }
 }
