@@ -45,22 +45,27 @@ lech → son → vstaet → fly … В ролике нет неиспользу�
 Исправлена ошибка оригинала: у фразы №16 не было метки `phr16`, поэтому когда случайный выбор
 выпадал на 16, кот замирал. Метка добавляется при сборке (`tools/patch_swf.py`).
 
-## Запуск
+## Скачать
 
-Готовая сборка: `dist/Depresnyak-win32-x64/Depresnyak.exe` (после `npm run package`).
+Готовые сборки лежат в [Releases](https://github.com/proteus1121/depresnyak/releases/latest):
 
-Из исходников:
+- `Depresnyak-<версия>-portable.exe` — один файл, запускается без установки;
+- `Depresnyak-<версия>-win-x64.zip` — то же самое папкой (распаковать и запустить `Depresnyak.exe`), стартует быстрее.
+
+Сборки не подписаны, поэтому при первом запуске SmartScreen может предупредить:
+«Подробнее» → «Выполнить в любом случае».
+
+## Сборка из исходников
 
 ```sh
 npm install
-npm start
+npm start      # запустить
+npm run dist   # собрать dist/Depresnyak-<версия>-portable.exe и .zip
 ```
 
-Сборка exe:
-
-```sh
-npm run package
-```
+Новый релиз: поставить тег `vX.Y.Z` и запушить его (`git tag v3.0.1 && git push origin v3.0.1`).
+GitHub Actions (`.github/workflows/release.yml`) соберёт exe и zip и выложит их в релиз.
+Workflow можно запустить и вручную: Actions → Release → Run workflow.
 
 ## Как устроено
 

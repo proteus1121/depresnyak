@@ -1,20 +1,60 @@
 {
   "name": "depresnyak",
   "productName": "Кот Депресняк",
-  "version": "2.0.0",
+  "version": "3.0.0",
   "description": "Кот Депресняк — настольный питомец (порт с MDM Zinc/Flash на Electron + Ruffle)",
   "main": "app/main.js",
   "private": true,
   "scripts": {
     "start": "electron .",
     "patch-swf": "python tools/patch_swf.py assets-src/cat_original.swf app/assets/cat.swf",
-    "package": "electron-packager . Depresnyak --platform=win32 --arch=x64 --icon=app/assets/cat.ico --out=dist --overwrite --asar --ignore=\"(dist|assets-src|tools)[\\/]\" --ignore=\"(README\\.md|\\.gitignore)$\""
+    "dist": "electron-builder --win --x64 --publish never"
   },
   "dependencies": {
     "@ruffle-rs/ruffle": "0.7.1"
   },
   "devDependencies": {
     "electron": "44.9.3",
-    "@electron/packager": "20.3.0"
+    "electron-builder": "26.18.0"
+  },
+  "build": {
+    "appId": "ru.buslaev.depresnyak",
+    "productName": "Кот Депресняк",
+    "executableName": "Depresnyak",
+    "copyright": "Кот Депресняк © авторы «Мефодия Буслаева»; порт — Artem Ishchenko",
+    "directories": {
+      "output": "dist",
+      "buildResources": "build"
+    },
+    "files": [
+      "app/**/*",
+      "!app/selftest.js",
+      "package.json",
+      "node_modules/@ruffle-rs/ruffle/**/*",
+      "!**/*.map"
+    ],
+    "asar": true,
+    "win": {
+      "icon": "build/icon.ico",
+      "target": [
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "zip",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "artifactName": "Depresnyak-${version}-win-x64.${ext}"
+    },
+    "portable": {
+      "artifactName": "Depresnyak-${version}-portable.${ext}"
+    },
+    "publish": null
   }
 }

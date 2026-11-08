@@ -1,0 +1,67 @@
+name: Release
+
+# Сборка Windows-exe и публикация в GitHub Releases.
+#  - push тега вида v1.2.3  -> релиз v1.2.3 с exe и zip;
+#  - ручной запуск (Actions -> Release -> Run workflow) -> указать тег, релиз создастся/обновится.
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Тег релиза (например, v3.0.0)'
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+    env:
+      TAG: ${{ github.event.inputs.tag || github.ref_name }}
+      CSC_IDENTITY_AUTO_DISCOVERY: 'false'  # без подписи кода
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Rebuild cat.swf from the original
+        run: python tools/patch_swf.py assets-src/cat_original.swf app/assets/cat.swf
+
+      - name: Set version from tag
+        shell: bash
+        run: npm pkg set version="${TAG#v}"
+
+      - name: Build
+        run: npm run dist
+
+      - name: Publish release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          VERSION="${TAG#v}"
+          FILES=(dist/Depresnyak-${VERSION}-portable.exe dist/Depresnyak-${VERSION}-win-x64.zip)
+          ls -la "${FILES[@]}"
+          NOTES="Кот Депресняк ${VERSION} для Windows 10/11 (x64).
+
+          - **Depresnyak-${VERSION}-portable.exe** — один файл, запускается без установки.
+          - **Depresnyak-${VERSION}-win-x64.zip** — та же программа папкой (распаковать и запустить Depresnyak.exe), стартует быстрее.
+
+          Программа не подписана, поэтому Windows SmartScreen может предупредить при первом запуске: «Подробнее» → «Выполнить в любом случае»."
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" "${FILES[@]}" --clobber
+          else
+            gh release create "$TAG" "${FILES[@]}" --title "Кот Депресняк ${VERSION}" --notes "$NOTES" --target "$GITHUB_SHA"
+          fi

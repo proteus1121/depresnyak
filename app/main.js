@@ -304,8 +304,14 @@ function resetPosition() {
   const { w, h, wa } = windowSize();
   win.setBounds({ x: Math.round(wa.x + (wa.width - w) / 2), y: Math.round(wa.y + (wa.height - h) / 2), width: w, height: h });
 }
+// Портативная сборка распаковывается во временную папку при каждом запуске,
+// поэтому в автозапуск надо прописывать сам портативный exe.
+const loginExe = process.env.PORTABLE_EXECUTABLE_FILE || process.execPath;
+function setAutostart(on) {
+  app.setLoginItemSettings({ openAtLogin: on, path: loginExe });
+}
 function autostartEnabled() {
-  return app.getLoginItemSettings().openAtLogin;
+  return app.getLoginItemSettings({ path: loginExe }).openAtLogin;
 }
 function updateTrayMenu() {
   if (!tray) return;
@@ -348,7 +354,7 @@ function updateTrayMenu() {
       type: 'checkbox',
       checked: autostartEnabled(),
       enabled: app.isPackaged,
-      click: (item) => app.setLoginItemSettings({ openAtLogin: item.checked }),
+      click: (item) => setAutostart(item.checked),
     },
     { type: 'separator' },
     { label: 'О программе', click: () => showAbout() },
