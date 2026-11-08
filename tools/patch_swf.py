@@ -135,4 +135,5 @@ def main(src, dst):
 
 
 if __name__ == "__main__":
+    sys.stdout.reconfigure(encoding="utf-8")  # консоль Windows-раннера не в UTF-8
     main(sys.argv[1], sys.argv[2])
